@@ -1,0 +1,146 @@
+version: '3'
+
+services:
+  jellyfin:
+    image: linuxserver/jellyfin:latest
+    container_name: jellyfin
+    runtime: nvidia
+    restart: unless-stopped
+    deploy:
+     resources:
+      reservations:
+       devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - PUID=1000
+      - PGID=1000
+    ports:
+      - 8002:8096
+      - 8920:8920
+    volumes:
+      - /Docker/Jellyfin:/config
+      - /Storage/Media/Movies:/Movies
+      - /Storage/Media/TV_Shows:/TV_Shows
+    devices:
+      - /dev/dri:/dev/dri
+
+      - /dev/nvidia0:/dev/nvidia0
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia-modeset:/dev/nvidia-modeset
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+      - /dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools
+
+  radarr:
+    image: linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /Docker/Radarr:/config
+      - /Storage/Media/Downloads:/Downloads
+      - /Storage/Media/Movies:/Movies
+    ports:
+      - 8003:7878
+
+  sonarr:
+    image: linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /Docker/Sonarr:/config
+      - /Storage/Media/Downloads:/Downloads
+      - /Storage/Media/TV_Shows:/TV_Shows
+    ports:
+      - 8004:8989
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Denver
+    volumes:
+      - /Docker/Bazarr:/config
+      - /Storage/Media/Movies:/Movies
+      - /Storage/Media/TV_Shows:/TV_Shows
+    ports:
+      - 8005:6767
+    restart: unless-stopped
+
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Denver
+      - AUTO_UPDATE=true 
+    volumes:
+      - /Docker/Jackett:/config
+      - /Storage/Media/Downloads:/Downloads
+    ports:
+      - 8006:9117
+    restart: unless-stopped
+
+  jellyseerr:
+       image: fallenbagel/jellyseerr:latest
+       container_name: jellyseerr
+       environment:
+            - LOG_LEVEL=debug
+            - TZ=America/Denver
+       ports:
+            - 8007:5055
+       volumes:
+            - /Docker/Jellyseer:/app/config
+       restart: unless-stopped
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - TZ=America/Denver
+    ports:
+      - 8008:8191
+    restart: unless-stopped 
+
+  jellystat-db:
+    image: postgres:15.2
+    environment:
+      POSTGRES_DB: 'jfstat'
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: evajelly
+    volumes:
+    - /Docker/JFstat/postgres-data:/var/lib/postgresql/data # Mounting the volume
+
+  jellystat:
+    image: cyfershepard/jellystat:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: evajelly
+      POSTGRES_IP: jellystat-db
+      POSTGRES_PORT: 5432
+      JWT_SECRET: evajelly
+    ports:
+      - "8010:3000" #Server Port
+    volumes:
+      - /Docker/JFstat/backup-data:/app/backend/backup-data # Mounting the volume
+    depends_on:
+      - jellystat-db
+
+  wizarr:
+    container_name: wizarr
+    image: ghcr.io/wizarrrr/wizarr:latest
+    ports:
+      - 8020:5690
+    volumes:
+      - ./wizarr/database:/data/database

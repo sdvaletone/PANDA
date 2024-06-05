@@ -1,0 +1,3 @@
+systemctl restart nfs-server.service
+
+systemctl restart nfs-utils.service
