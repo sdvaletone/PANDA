@@ -1,0 +1,25 @@
+version: '2.4'
+
+services:
+  octoprint:
+    image: octoprint/octoprint
+    restart: unless-stopped
+    ports:
+      - 8001:80
+    volumes:
+     - /Docker/Octoprint:/octoprint
+
+  homeassistant:
+    container_name: homeassistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    ports: 
+    - 8009:80
+    volumes:
+      - /Docker/HomeAssistant:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      - TZ=America/Denver
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
