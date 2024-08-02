@@ -1,0 +1,83 @@
+{
+        email sdvaletone35@gmail.com
+        log {
+            output file /var/log/caddy/access.log
+            format json
+        }
+    }
+    
+    octo.nervhq.space {
+        reverse_proxy :8001
+        encode zstd gzip
+        header {
+            X-Content-Type-Options nosniff
+            X-Frame-Options DENY
+            Referrer-Policy no-referrer
+        }
+    }
+    
+    port.nervhq.space {
+        reverse_proxy :9000
+        encode zstd gzip
+        header {
+            X-Content-Type-Options nosniff
+            X-Frame-Options DENY
+            Referrer-Policy no-referrer
+        }
+    }
+    
+    jellyfin.nervhq.space {
+        reverse_proxy :8002
+        encode zstd gzip
+        header {
+            X-Content-Type-Options nosniff
+            X-Frame-Options DENY
+            Referrer-Policy no-referrer
+        }
+    }
+    
+    jelly.nervhq.space {
+        reverse_proxy :8007
+        encode zstd gzip
+    }
+    
+    radarr.nervhq.space {
+        reverse_proxy :8003
+        encode zstd gzip
+    }
+    
+    sonarr.nervhq.space {
+        reverse_proxy :8004
+        encode zstd gzip
+    }
+    
+    wizarr.nervhq.space {
+        reverse_proxy :8020
+        encode zstd gzip
+        header {
+            X-Content-Type-Options nosniff
+            X-Frame-Options DENY
+            Referrer-Policy no-referrer
+        }
+    }
+    
+    octomk4.nervhq.space {
+        reverse_proxy 192.168.1.52:8001
+        encode zstd gzip
+        header {
+            X-Content-Type-Options nosniff
+            X-Frame-Options DENY
+            Referrer-Policy no-referrer
+        }
+    }
+    
+    home.nervhq.space {
+        reverse_proxy :7575
+        encode zstd gzip
+        header {
+            X-Content-Type-Options nosniff
+            X-Frame-Options DENY
+            Referrer-Policy no-referrer
+        }
+    }
+    
