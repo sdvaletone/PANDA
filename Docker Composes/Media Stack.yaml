@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   jellyfin:
@@ -7,9 +7,9 @@ services:
     runtime: nvidia
     restart: unless-stopped
     deploy:
-     resources:
-      reservations:
-       devices:
+      resources:
+        reservations:
+          devices:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
@@ -17,20 +17,24 @@ services:
       - PUID=1000
       - PGID=1000
     ports:
-      - 8002:8096
-      - 8920:8920
+      - "8002:8096"
+      - "8920:8920"
     volumes:
-      - /Docker/Jellyfin:/config
-      - /Storage/Media/Movies:/Movies
-      - /Storage/Media/TV_Shows:/TV_Shows
+      - "/Docker/Jellyfin:/config"
+      - "/Storage/Media/Movies:/Movies"
+      - "/Storage/Media/TV_Shows:/TV_Shows"
     devices:
-      - /dev/dri:/dev/dri
-
-      - /dev/nvidia0:/dev/nvidia0
-      - /dev/nvidiactl:/dev/nvidiactl
-      - /dev/nvidia-modeset:/dev/nvidia-modeset
-      - /dev/nvidia-uvm:/dev/nvidia-uvm
-      - /dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools
+      - "/dev/dri:/dev/dri"
+      - "/dev/nvidia0:/dev/nvidia0"
+      - "/dev/nvidiactl:/dev/nvidiactl"
+      - "/dev/nvidia-modeset:/dev/nvidia-modeset"
+      - "/dev/nvidia-uvm:/dev/nvidia-uvm"
+      - "/dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8096 || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
 
   radarr:
     image: linuxserver/radarr:latest
@@ -40,11 +44,16 @@ services:
       - PUID=1000
       - PGID=1000
     volumes:
-      - /Docker/Radarr:/config
-      - /Storage/Media/Downloads:/Downloads
-      - /Storage/Media/Movies:/Movies
+      - "/Docker/Radarr:/config"
+      - "/Storage/Media/Downloads:/Downloads"
+      - "/Storage/Media/Movies:/Movies"
     ports:
-      - 8003:7878
+      - "8003:7878"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7878 || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
 
   sonarr:
     image: linuxserver/sonarr:latest
@@ -54,11 +63,16 @@ services:
       - PUID=1000
       - PGID=1000
     volumes:
-      - /Docker/Sonarr:/config
-      - /Storage/Media/Downloads:/Downloads
-      - /Storage/Media/TV_Shows:/TV_Shows
+      - "/Docker/Sonarr:/config"
+      - "/Storage/Media/Downloads:/Downloads"
+      - "/Storage/Media/TV_Shows:/TV_Shows"
     ports:
-      - 8004:8989
+      - "8004:8989"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8989 || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
 
   bazarr:
     image: lscr.io/linuxserver/bazarr:latest
@@ -68,12 +82,17 @@ services:
       - PGID=1000
       - TZ=America/Denver
     volumes:
-      - /Docker/Bazarr:/config
-      - /Storage/Media/Movies:/Movies
-      - /Storage/Media/TV_Shows:/TV_Shows
+      - "/Docker/Bazarr:/config"
+      - "/Storage/Media/Movies:/Movies"
+      - "/Storage/Media/TV_Shows:/TV_Shows"
     ports:
-      - 8005:6767
+      - "8005:6767"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6767 || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
 
   jackett:
     image: lscr.io/linuxserver/jackett:latest
@@ -84,23 +103,33 @@ services:
       - TZ=America/Denver
       - AUTO_UPDATE=true 
     volumes:
-      - /Docker/Jackett:/config
-      - /Storage/Media/Downloads:/Downloads
+      - "/Docker/Jackett:/config"
+      - "/Storage/Media/Downloads:/Downloads"
     ports:
-      - 8006:9117
+      - "8006:9117"
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9117/UI/Login || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
 
   jellyseerr:
-       image: fallenbagel/jellyseerr:latest
-       container_name: jellyseerr
-       environment:
-            - LOG_LEVEL=debug
-            - TZ=America/Denver
-       ports:
-            - 8007:5055
-       volumes:
-            - /Docker/Jellyseer:/app/config
-       restart: unless-stopped
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=America/Denver
+    ports:
+      - "8007:5055"
+    volumes:
+      - "/Docker/Jellyseer:/app/config"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5055 || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
 
   flaresolverr:
     image: ghcr.io/flaresolverr/flaresolverr:latest
@@ -110,20 +139,33 @@ services:
       - LOG_HTML=${LOG_HTML:-false}
       - TZ=America/Denver
     ports:
-      - 8008:8191
-    restart: unless-stopped 
+      - "8008:8191"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8191 || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
 
   jellystat-db:
     image: postgres:15.2
+    container_name: jellystat-db
     environment:
       POSTGRES_DB: 'jfstat'
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: evajelly
     volumes:
-    - /Docker/JFstat/postgres-data:/var/lib/postgresql/data # Mounting the volume
+      - "/Docker/JFstat/postgres-data:/var/lib/postgresql/data" # Mounting the volume
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
 
   jellystat:
     image: cyfershepard/jellystat:latest
+    container_name: jellystat
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: evajelly
@@ -131,16 +173,104 @@ services:
       POSTGRES_PORT: 5432
       JWT_SECRET: evajelly
     ports:
-      - "8010:3000" #Server Port
+      - "8010:3000" # Server Port
     volumes:
-      - /Docker/JFstat/backup-data:/app/backend/backup-data # Mounting the volume
+      - "/Docker/JFstat/backup-data:/app/backend/backup-data" # Mounting the volume
     depends_on:
-      - jellystat-db
+      jellystat-db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
 
   wizarr:
     container_name: wizarr
     image: ghcr.io/wizarrrr/wizarr:latest
     ports:
-      - 8020:5690
+      - "8020:5690"
     volumes:
-      - ./wizarr/database:/data/database
+      - "/Docker/Wizarr/wizarr/database:/data/database"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5690 || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+
+  subgen:
+    container_name: subgen
+    tty: true
+    image: mccloud/subgen
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - "WHISPER_MODEL=large-v3"
+      - "WHISPER_THREADS=8"
+      - "PROCADDEDMEDIA=TRUE"
+      - "PROCMEDIAONPLAY=TRUE"
+      - "NAMESUBLANG=AI-ENG-SUB"
+      - "SKIPIFINTERNALSUBLANG=eng"
+      - "JELLYFINTOKEN=9ea317319bc944a6af0e0181829fe459"
+      - "JELLYFINSERVER=http://192.168.1.50:8002"
+      - "WEBHOOKPORT=9000"
+      - "CONCURRENT_TRANSCRIPTIONS=3"
+      - "WORD_LEVEL_HIGHLIGHT=False"
+      - "DEBUG=True"
+      - "USE_PATH_MAPPING=False"
+      - "PATH_MAPPING_FROM=/tv"
+      - "PATH_MAPPING_TO=/Volumes/TV"
+      - "TRANSCRIBE_DEVICE=cpu"
+      - "CLEAR_VRAM_ON_COMPLETE=True"
+      - "HF_TRANSFORMERS=False"
+      - "HF_BATCH_SIZE=24"
+      - "MODEL_PATH=./models"
+      - "UPDATE=True"
+      - "APPEND=False"
+      - "TRANSCRIBE_OR_TRANSLATE=translate"
+    volumes:
+      - "/Storage/Media/TV_Shows:/tv"
+      - "/Storage/Media/Movies:/movies"
+      - "/Docker/Whisper/subgen/models:/subgen/models"
+    devices:
+      - "/dev/dri:/dev/dri"
+      - "/dev/nvidia0:/dev/nvidia0"
+      - "/dev/nvidiactl:/dev/nvidiactl"
+      - "/dev/nvidia-modeset:/dev/nvidia-modeset"
+      - "/dev/nvidia-uvm:/dev/nvidia-uvm"
+      - "/dev/nvidia-uvm-tools:/dev/nvidia-uvm-tools"
+    ports:
+      - "8011:9000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000 || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+
+  homarr:
+    container_name: homarr
+    image: ghcr.io/ajnart/homarr:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Optional, only if you want docker integration
+      - ./homarr/configs:/app/data/configs
+      - ./homarr/icons:/app/public/icons
+      - ./homarr/data:/data
+    ports:
+      - '7575:7575'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7575 || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+
+volumes:
+  db-data:
