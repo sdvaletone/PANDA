@@ -101,7 +101,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=America/Denver
-      - AUTO_UPDATE=true 
+      - AUTO_UPDATE=true
     volumes:
       - "/Docker/Jackett:/config"
       - "/Storage/Media/Downloads:/Downloads"
@@ -155,7 +155,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: evajelly
     volumes:
-      - "/Docker/JFstat/postgres-data:/var/lib/postgresql/data" # Mounting the volume
+      - "/Docker/JFstat/postgres-data:/var/lib/postgresql/data"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -173,9 +173,9 @@ services:
       POSTGRES_PORT: 5432
       JWT_SECRET: evajelly
     ports:
-      - "8010:3000" # Server Port
+      - "8010:3000"
     volumes:
-      - "/Docker/JFstat/backup-data:/app/backend/backup-data" # Mounting the volume
+      - "/Docker/JFstat/backup-data:/app/backend/backup-data"
     depends_on:
       jellystat-db:
         condition: service_healthy
@@ -260,7 +260,7 @@ services:
     image: ghcr.io/ajnart/homarr:latest
     restart: unless-stopped
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock # Optional, only if you want docker integration
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./homarr/configs:/app/data/configs
       - ./homarr/icons:/app/public/icons
       - ./homarr/data:/data
@@ -271,6 +271,16 @@ services:
       interval: 1m
       timeout: 10s
       retries: 3
-
-volumes:
-  db-data:
+ 
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Denver
+    volumes:
+      - /Docker/Prowlarr:/config
+    ports:
+      - 8009:9696
+    restart: unless-stopped
