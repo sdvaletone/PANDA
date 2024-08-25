@@ -101,7 +101,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=America/Denver
-      - AUTO_UPDATE=true 
+      - AUTO_UPDATE=true
     volumes:
       - "/Docker/Jackett:/config"
       - "/Storage/Media/Downloads:/Downloads"
@@ -252,4 +252,35 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9000 || exit 1"]
       interval: 1m
-     
+      timeout: 10s
+      retries: 3
+
+  homarr:
+    container_name: homarr
+    image: ghcr.io/ajnart/homarr:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./homarr/configs:/app/data/configs
+      - ./homarr/icons:/app/public/icons
+      - ./homarr/data:/data
+    ports:
+      - '7575:7575'
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7575 || exit 1"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+ 
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Denver
+    volumes:
+      - /Docker/Prowlarr:/config
+    ports:
+      - 8009:9696
+    restart: unless-stopped

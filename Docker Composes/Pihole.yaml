@@ -9,12 +9,16 @@ services:
     ports:
       - "53:53/tcp"
       - "53:53/udp"
+      - "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
+      - "8012:80/tcp"
     environment:
-      TZ: America/Denver
+      TZ: 'America/Chicago'
       WEBPASSWORD: evajelly
     # Volumes store your data between container upgrades
     volumes:
       - /Docker/Pihole/etc-pihole:/etc/pihole
       - /Docker/Pihole/dnsmasq/etc-dnsmasq.d:/etc/dnsmasq.d
     #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+    cap_add:
+      - NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
     restart: unless-stopped
