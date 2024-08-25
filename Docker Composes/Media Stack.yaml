@@ -151,11 +151,11 @@ services:
     image: postgres:15.2
     container_name: jellystat-db
     environment:
-      POSTGRES_DB: 'jfstat'
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: evajelly
+      - POSTGRES_DB=jfstat
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=evajelly
     volumes:
-      - "/Docker/JFstat/postgres-data:/var/lib/postgresql/data" # Mounting the volume
+      - "/Docker/JFstat/postgres-data:/var/lib/postgresql/data"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -167,15 +167,15 @@ services:
     image: cyfershepard/jellystat:latest
     container_name: jellystat
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: evajelly
-      POSTGRES_IP: jellystat-db
-      POSTGRES_PORT: 5432
-      JWT_SECRET: evajelly
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=evajelly
+      - POSTGRES_IP=jellystat-db
+      - POSTGRES_PORT=5432
+      - JWT_SECRET=evajelly
     ports:
-      - "8010:3000" # Server Port
+      - "8010:3000"
     volumes:
-      - "/Docker/JFstat/backup-data:/app/backend/backup-data" # Mounting the volume
+      - "/Docker/JFstat/backup-data:/app/backend/backup-data"
     depends_on:
       jellystat-db:
         condition: service_healthy
@@ -212,29 +212,29 @@ services:
               count: 1
               capabilities: [gpu]
     environment:
-      - "WHISPER_MODEL=large-v3"
-      - "WHISPER_THREADS=8"
-      - "PROCADDEDMEDIA=TRUE"
-      - "PROCMEDIAONPLAY=TRUE"
-      - "NAMESUBLANG=AI-ENG-SUB"
-      - "SKIPIFINTERNALSUBLANG=eng"
-      - "JELLYFINTOKEN=9ea317319bc944a6af0e0181829fe459"
-      - "JELLYFINSERVER=http://192.168.1.50:8002"
-      - "WEBHOOKPORT=9000"
-      - "CONCURRENT_TRANSCRIPTIONS=3"
-      - "WORD_LEVEL_HIGHLIGHT=False"
-      - "DEBUG=True"
-      - "USE_PATH_MAPPING=False"
-      - "PATH_MAPPING_FROM=/tv"
-      - "PATH_MAPPING_TO=/Volumes/TV"
-      - "TRANSCRIBE_DEVICE=cpu"
-      - "CLEAR_VRAM_ON_COMPLETE=True"
-      - "HF_TRANSFORMERS=False"
-      - "HF_BATCH_SIZE=24"
-      - "MODEL_PATH=./models"
-      - "UPDATE=True"
-      - "APPEND=False"
-      - "TRANSCRIBE_OR_TRANSLATE=translate"
+      - WHISPER_MODEL=large-v3
+      - WHISPER_THREADS=8
+      - PROCADD_MEDIA=TRUE
+      - PROCMEDIAONPLAY=TRUE
+      - NAMESUBLANG=AI-ENG-SUB
+      - SKIPIFINTERNALSUBLANG=eng
+      - JELLYFINTOKEN=9ea317319bc944a6af0e0181829fe459
+      - JELLYFINSERVER=http://192.168.1.50:8002
+      - WEBHOOKPORT=9000
+      - CONCURRENT_TRANSCRIPTIONS=3
+      - WORD_LEVEL_HIGHLIGHT=False
+      - DEBUG=True
+      - USE_PATH_MAPPING=False
+      - PATH_MAPPING_FROM=/tv
+      - PATH_MAPPING_TO=/Volumes/TV
+      - TRANSCRIBE_DEVICE=cpu
+      - CLEAR_VRAM_ON_COMPLETE=True
+      - HF_TRANSFORMERS=False
+      - HF_BATCH_SIZE=24
+      - MODEL_PATH=./models
+      - UPDATE=True
+      - APPEND=False
+      - TRANSCRIBE_OR_TRANSLATE=translate
     volumes:
       - "/Storage/Media/TV_Shows:/tv"
       - "/Storage/Media/Movies:/movies"
@@ -252,25 +252,4 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9000 || exit 1"]
       interval: 1m
-      timeout: 10s
-      retries: 3
-
-  homarr:
-    container_name: homarr
-    image: ghcr.io/ajnart/homarr:latest
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock # Optional, only if you want docker integration
-      - ./homarr/configs:/app/data/configs
-      - ./homarr/icons:/app/public/icons
-      - ./homarr/data:/data
-    ports:
-      - '7575:7575'
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:7575 || exit 1"]
-      interval: 1m
-      timeout: 10s
-      retries: 3
-
-volumes:
-  db-data:
+     
