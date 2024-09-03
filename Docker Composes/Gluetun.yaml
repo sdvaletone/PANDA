@@ -1,29 +1,26 @@
-version: "3"
+version: '3.8'
+
 services:
   gluetun:
-    image: qmcgaw/gluetun
-    container_name: gluetun
-    restart: always
-    healthcheck:
-      test: wget -O - https://am.i.mullvad.net/connected | grep -q "You are connected"
+    image: qmcgaw/gluetun:latest
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
-      - "8888:8888/tcp" # HTTP proxy
-      - "8388:8388/tcp" # Shadowsocks
-      - "8388:8388/udp" # Shadowsocks
-      - "192.168.1.51:8088:8088" # Forward port 8088 to qBittorrent container
+      - 8888:8888/tcp
+      - 8388:8388/tcp
+      - 8388:8388/udp
+      - "192.168.1.50:8088:8088" # Forward port 8088 to qBittorrent container
     volumes:
-      - "/Docker/Gluetun:/gluetun"
+      - /Docker/Gluetun:/gluetun
     environment:
       - VPN_SERVICE_PROVIDER=mullvad
-      - VPN_TYPE=wireguard
-      - WIREGUARD_PRIVATE_KEY=IPc+52mYVOV/3ij4NAwNa7FyFhKuP+Wl7aVGtqKTzFc=
-      - WIREGUARD_ADDRESSES=10.65.205.185/32
+      - VPN_TYPE=openvpn
+      - OPENVPN_USER=0305266735298883
+      - OPENVPN_PASSWORD=m
       - TZ=America/Denver
-
+      - LOG_LEVEL=info
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent
     container_name: qbittorrent
