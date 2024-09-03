@@ -11,7 +11,7 @@ services:
       - 8888:8888/tcp
       - 8388:8388/tcp
       - 8388:8388/udp
-      - "192.168.1.50:8088:8088" # Forward port 8088 to qBittorrent container
+      - "192.168.1.51:8088:8088" # Forward port 8088 to qBittorrent container
     volumes:
       - /Docker/Gluetun:/gluetun
     environment:
@@ -31,7 +31,7 @@ services:
       - WEBUI_PORT=8088
     volumes:
       - "/Docker/Qbit/Config:/config"
-      - "/Storage/Media/Downloads:/Downloads"
+      - "/Storage/Downloads:/downloads"
     depends_on:
       - gluetun
     network_mode: "service:gluetun"  # Set the network mode to use the network stack of gluetun
