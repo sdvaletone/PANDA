@@ -1,0 +1,18 @@
+
+
+services:
+  qbittorrent:
+    image: trigus42/qbittorrentvpn
+    container_name: qbitnox
+    environment:
+      - VPN_TYPE=wireguard
+
+      - WEBUI_PASSWORD=adminadmin
+    volumes:
+      - '/volume1/Docker/Trigus/config/:/config'
+      - /volume1/Downloads:/downloads
+    ports:
+      - 9080:8080
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN 
