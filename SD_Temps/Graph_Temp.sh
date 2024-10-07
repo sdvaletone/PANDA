@@ -79,19 +79,19 @@ while true; do
     
     # Log high temperature events if any sensor is above 35°C
     HIGH_TEMP_EVENT=""
-    if [[ ${NVME_TEMP:-0} -gt 35 ]]; then
+    if (( $(echo "${NVME_TEMP:-0} > 35" | bc -l) )); then
       HIGH_TEMP_EVENT+=" NVMe"
       nvme_high_count=$((nvme_high_count + 1))
     fi
-    if [[ ${GPU_TEMP:-0} -gt 35 ]]; then
+    if (( $(echo "${GPU_TEMP:-0} > 35" | bc -l) )); then
       HIGH_TEMP_EVENT+=" GPU"
       gpu_high_count=$((gpu_high_count + 1))
     fi
-    if [[ ${BATTERY_TEMP:-0} -gt 35 ]]; then
+    if (( $(echo "${BATTERY_TEMP:-0} > 35" | bc -l) )); then
       HIGH_TEMP_EVENT+=" Battery"
       battery_high_count=$((battery_high_count + 1))
     fi
-    if [[ ${SYSTEM_TEMP:-0} -gt 35 ]]; then
+    if (( $(echo "${SYSTEM_TEMP:-0} > 35" | bc -l) )); then
       HIGH_TEMP_EVENT+=" System"
       system_high_count=$((system_high_count + 1))
     fi
