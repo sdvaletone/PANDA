@@ -4,21 +4,33 @@
 GREEN='\033[0;32m'
 NC='\033[0m' # No color
 
-# Prompt the user for duration and validate input (multiples of 5 between 5 and 240)
-while true; do
-  read -p "Enter the logging duration in minutes (multiples of 5, between 5 and 240): " DURATION_MINUTES
-  if [[ "$DURATION_MINUTES" =~ ^[0-9]+$ ]] && [ "$DURATION_MINUTES" -ge 5 ] && [ "$DURATION_MINUTES" -le 240 ] && ((DURATION_MINUTES % 5 == 0)); then
-    break
-  else
-    echo "Please enter a valid number that is a multiple of 5 and between 5 and 240."
-  fi
-done
-
-# Calculate the total number of iterations and interval
+# Set logging interval in seconds and define 5-minute mark for reporting
 INTERVAL_SECONDS=10
-ITERATIONS=$((DURATION_MINUTES * 60 / INTERVAL_SECONDS))
+FIVE_MINUTE_INTERVAL=30  # 5 minutes / 10 seconds = 30 iterations
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 OUTPUT_FILE="temperature_log_${TIMESTAMP}.csv"
+HIGH_TEMP_FILE="high_temp_events_${TIMESTAMP}.csv"
+
+# Function to prompt the user for input
+get_user_input() {
+  while true; do
+    read -p "Enter the target SoC percentage to stop logging (1-100) or 't' to set a time limit: " TARGET_SOC
+    if [[ "$TARGET_SOC" =~ ^[0-9]+$ ]] && [ "$TARGET_SOC" -ge 1 ] && [ "$TARGET_SOC" -le 100 ]; then
+      break
+    elif [[ "$TARGET_SOC" == "t" ]]; then
+      read -p "Enter the time limit in minutes (1-240): " TIME_LIMIT
+      if [[ "$TIME_LIMIT" =~ ^[0-9]+$ ]] && [ "$TIME_LIMIT" -ge 1 ] && [ "$TIME_LIMIT" -le 240 ]; then
+        TARGET_SOC="time"
+        END_TIME=$(( $(date +%s) + (TIME_LIMIT * 60) ))
+        break
+      else
+        echo "Please enter a valid number between 1 and 240."
+      fi
+    else
+      echo "Please enter a valid number between 1 and 100 or 't' to set a time limit."
+    fi
+  done
+}
 
 # Check if sensors command is available
 if ! command -v sensors &> /dev/null; then
@@ -26,81 +38,107 @@ if ! command -v sensors &> /dev/null; then
   exit 1
 fi
 
+# Initial prompt for user input
+get_user_input
+
 # Log header to CSV
 if ! echo "Timestamp,NVMe Temp,GPU Temp,Battery Temp,System Temp,SoC,Charge Current" > "$OUTPUT_FILE"; then
   echo "Error writing to $OUTPUT_FILE. Please check your permissions."
   exit 1
 fi
 
-# Start message
-echo "Starting temperature logging for $DURATION_MINUTES minutes. Data will be saved in $OUTPUT_FILE."
+# Log header for high temperature events CSV
+if ! echo "Timestamp,High Temp Events" > "$HIGH_TEMP_FILE"; then
+  echo "Error writing to $HIGH_TEMP_FILE. Please check your permissions."
+  exit 1
+fi
 
-# Initialize arrays for storing values for averages and statistics
-nvme_values=()
-gpu_values=()
-battery_values=()
-system_values=()
-soc_values=()        # State of Charge
-charge_current_values=()  # Charge Current
+# Initialize high temp counters
+nvme_high_count=0
+gpu_high_count=0
+battery_high_count=0
+system_high_count=0
 
-# Log temperature with a countdown message every minute
-for ((i=1; i<=ITERATIONS; i++)); do
-  # Capture time and each relevant temperature sensor
-  TIME="$(date +"%H:%M:%S")"  # Changed timestamp format to HH:MM:SS
-  NVME_TEMP=$(sensors | awk '/Composite/ {print $2}' | tr -d '+°C')
-  GPU_TEMP=$(sensors | awk '/edge:/ {print $2}' | tr -d '+°C')
-  BATTERY_TEMP=$(sensors | awk '/Battery Temp/ {print $3}' | tr -d '+°C')
-  SYSTEM_TEMP=$(sensors | awk '/^temp1:/ {print $2}' | tr -d '+°C')
-  SOC=$(cat /sys/class/power_supply/BAT1/capacity 2>/dev/null || echo "N/A")
-  CHARGE_CURRENT=$(echo $(( $(cat /sys/class/power_supply/BAT1/current_now) / 1000 )) 2>/dev/null || echo "N/A")
+while true; do
+  # Start message
+  echo "Starting temperature logging until SoC reaches $TARGET_SOC% or time limit is reached. Data will be saved in $OUTPUT_FILE and high temperature events in $HIGH_TEMP_FILE."
 
-  # Log data to CSV, with "N/A" if a sensor is unavailable
-  echo "$TIME,${NVME_TEMP:-N/A},${GPU_TEMP:-N/A},${BATTERY_TEMP:-N/A},${SYSTEM_TEMP:-N/A},${SOC:-N/A},${CHARGE_CURRENT:-N/A}" >> "$OUTPUT_FILE"
+  # Main logging loop
+  iteration=0
+  while :; do
+    # Capture date and each relevant temperature sensor
+    DATE="$(date +"%H:%M:%S")"
+    NVME_TEMP=$(sensors | awk '/Composite/ {print $2}' | tr -d '+°C')
+    GPU_TEMP=$(sensors | awk '/edge:/ {print $2}' | tr -d '+°C')
+    BATTERY_TEMP=$(sensors | awk '/Battery Temp/ {print $3}' | tr -d '+°C')
+    SYSTEM_TEMP=$(sensors | awk '/^temp1:/ {print $2}' | tr -d '+°C')
+    
+    # Get SoC and charge current
+    SOC=$(cat /sys/class/power_supply/BAT1/capacity)
+    CHARGE_CURRENT=$(echo $(( $(cat /sys/class/power_supply/BAT1/current_now) / 1000 )))
+    
+    # Log high temperature events if any sensor is above 35°C
+    HIGH_TEMP_EVENT=""
+    if [[ ${NVME_TEMP:-0} -gt 35 ]]; then
+      HIGH_TEMP_EVENT+=" NVMe"
+      nvme_high_count=$((nvme_high_count + 1))
+    fi
+    if [[ ${GPU_TEMP:-0} -gt 35 ]]; then
+      HIGH_TEMP_EVENT+=" GPU"
+      gpu_high_count=$((gpu_high_count + 1))
+    fi
+    if [[ ${BATTERY_TEMP:-0} -gt 35 ]]; then
+      HIGH_TEMP_EVENT+=" Battery"
+      battery_high_count=$((battery_high_count + 1))
+    fi
+    if [[ ${SYSTEM_TEMP:-0} -gt 35 ]]; then
+      HIGH_TEMP_EVENT+=" System"
+      system_high_count=$((system_high_count + 1))
+    fi
+    
+    # Log data to CSV
+    echo "$DATE,${NVME_TEMP:-N/A},${GPU_TEMP:-N/A},${BATTERY_TEMP:-N/A},${SYSTEM_TEMP:-N/A},${SOC:-N/A},${CHARGE_CURRENT:-N/A}" >> "$OUTPUT_FILE"
 
-  # Append temperatures to arrays
-  nvme_values+=(${NVME_TEMP:-0})
-  gpu_values+=(${GPU_TEMP:-0})
-  battery_values+=(${BATTERY_TEMP:-0})
-  system_values+=(${SYSTEM_TEMP:-0})
-  soc_values+=(${SOC:-0})
-  charge_current_values+=(${CHARGE_CURRENT:-0})
+    # Log high temperature events to separate CSV file
+    if [[ -n $HIGH_TEMP_EVENT ]]; then
+      echo "$DATE,$HIGH_TEMP_EVENT" >> "$HIGH_TEMP_FILE"
+    fi
 
-  # Average every 5 minutes (or 30 iterations)
-  if (( i % 30 == 0 )); then
-    nvme_avg=$(printf "%s\n" "${nvme_values[@]}" | awk '{sum+=$1} END {print sum/NR}')
-    gpu_avg=$(printf "%s\n" "${gpu_values[@]}" | awk '{sum+=$1} END {print sum/NR}')
-    battery_avg=$(printf "%s\n" "${battery_values[@]}" | awk '{sum+=$1} END {print sum/NR}')
-    system_avg=$(printf "%s\n" "${system_values[@]}" | awk '{sum+=$1} END {print sum/NR}')
-    soc_avg=$(printf "%s\n" "${soc_values[@]}" | awk '{sum+=$1} END {print sum/NR}')
-    charge_current_avg=$(printf "%s\n" "${charge_current_values[@]}" | awk '{sum+=$1} END {print sum/NR}')
+    # Display progress
+    echo -e "${GREEN}SoC: ${SOC}%, Target: ${TARGET_SOC}%, Charging Current: ${CHARGE_CURRENT}mA${NC}"
 
-    echo "Average over last 5 minutes,${nvme_avg},${gpu_avg},${battery_avg},${system_avg},${soc_avg},${charge_current_avg}" >> "$OUTPUT_FILE"
+    # Every 5 minutes, log the high temperature counts and reset them
+    if (( iteration % FIVE_MINUTE_INTERVAL == 0 && iteration != 0 )); then
+      echo "$DATE,,,5-Min High Temp Count - NVMe: $nvme_high_count, GPU: $gpu_high_count, Battery: $battery_high_count, System: $system_high_count" >> "$OUTPUT_FILE"
+      nvme_high_count=0
+      gpu_high_count=0
+      battery_high_count=0
+      system_high_count=0
+    fi
 
-    # Clear arrays for the next 5-minute interval
-    nvme_values=()
-    gpu_values=()
-    battery_values=()
-    system_values=()
-    soc_values=()
-    charge_current_values=()
+    # Exit when SoC reaches the target percentage or time limit is reached
+    if [[ "$TARGET_SOC" -ne "time" && "$SOC" -ge "$TARGET_SOC" ]]; then
+      echo -e "\nTarget SoC reached. Logging complete."
+      break
+    elif [[ "$TARGET_SOC" == "time" && "$(date +%s)" -ge "$END_TIME" ]]; then
+      echo -e "\nTime limit reached. Logging complete."
+      break
+    fi
+
+    # Wait for the specified interval and increment iteration
+    sleep "$INTERVAL_SECONDS"
+    ((iteration++))
+  done
+
+  # Prompt the user to continue or exit
+  read -p "Logging complete. Enter 'y' to log again, 'n' to exit: " REPEAT
+  if [[ "$REPEAT" == "n" ]]; then
+    echo "Exiting the script."
+    break
+  else
+    # Get new user input for the next round of logging
+    get_user_input
   fi
-
-  # Countdown message every 6 iterations (1 minute)
-  if (( i % 6 == 0 )); then
-    MINUTES_LEFT=$((DURATION_MINUTES - i * INTERVAL_SECONDS / 60))
-    echo -e "${GREEN}$MINUTES_LEFT minute(s) remaining...${NC}"
-  fi
-
-  # Progress indication
-  PERCENTAGE=$((i * 100 / ITERATIONS))
-  printf "\rProgress: ["
-  for ((j=0; j<PERCENTAGE/5; j++)); do printf "="; done
-  for ((j=PERCENTAGE/5; j<20; j++)); do printf " "; done
-  printf "] %d%%" "$PERCENTAGE"
-
-  # Wait for the specified interval
-  sleep "$INTERVAL_SECONDS"
 done
 
-# Final message
-echo -e "\n\nTemperature logging complete. Data saved in $OUTPUT_FILE."
+echo "Temperature logging complete. Data saved in $OUTPUT_FILE and high temperature events in $HIGH_TEMP_FILE."
