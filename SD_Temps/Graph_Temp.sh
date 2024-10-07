@@ -75,23 +75,23 @@ while true; do
     
     # Get SoC and charge current
     SOC=$(cat /sys/class/power_supply/BAT1/capacity)
-    CHARGE_CURRENT=$(echo $(( $(cat /sys/class/power_supply/BAT1/current_now) / 1000 )))
+    CHARGE_CURRENT=$(( $(cat /sys/class/power_supply/BAT1/current_now) / 1000 ))
     
     # Log high temperature events if any sensor is above 35°C
     HIGH_TEMP_EVENT=""
-    if (( $(echo "${NVME_TEMP:-0} > 35" | bc -l) )); then
+    if (( $(echo "$NVME_TEMP > 35" | awk '{print ($1 > $3)}') )); then
       HIGH_TEMP_EVENT+=" NVMe"
       nvme_high_count=$((nvme_high_count + 1))
     fi
-    if (( $(echo "${GPU_TEMP:-0} > 35" | bc -l) )); then
+    if (( $(echo "$GPU_TEMP > 35" | awk '{print ($1 > $3)}') )); then
       HIGH_TEMP_EVENT+=" GPU"
       gpu_high_count=$((gpu_high_count + 1))
     fi
-    if (( $(echo "${BATTERY_TEMP:-0} > 35" | bc -l) )); then
+    if (( $(echo "$BATTERY_TEMP > 35" | awk '{print ($1 > $3)}') )); then
       HIGH_TEMP_EVENT+=" Battery"
       battery_high_count=$((battery_high_count + 1))
     fi
-    if (( $(echo "${SYSTEM_TEMP:-0} > 35" | bc -l) )); then
+    if (( $(echo "$SYSTEM_TEMP > 35" | awk '{print ($1 > $3)}') )); then
       HIGH_TEMP_EVENT+=" System"
       system_high_count=$((system_high_count + 1))
     fi
