@@ -72,32 +72,40 @@ while true; do
     GPU_TEMP=$(sensors | awk '/edge:/ {print $2}' | tr -d '+°C')
     BATTERY_TEMP=$(sensors | awk '/Battery Temp/ {print $3}' | tr -d '+°C')
     SYSTEM_TEMP=$(sensors | awk '/^temp1:/ {print $2}' | tr -d '+°C')
-    
+
     # Get SoC and charge current
     SOC=$(cat /sys/class/power_supply/BAT1/capacity)
     CHARGE_CURRENT=$(( $(cat /sys/class/power_supply/BAT1/current_now) / 1000 ))
-    
+
+    # Check if the temperature readings are numeric
+    if ! [[ "$NVME_TEMP" =~ ^-?[0-9]+$ ]]; then NVME_TEMP=0; fi
+    if ! [[ "$GPU_TEMP" =~ ^-?[0-9]+$ ]]; then GPU_TEMP=0; fi
+    if ! [[ "$BATTERY_TEMP" =~ ^-?[0-9]+$ ]]; then BATTERY_TEMP=0; fi
+    if ! [[ "$SYSTEM_TEMP" =~ ^-?[0-9]+$ ]]; then SYSTEM_TEMP=0; fi
+    if ! [[ "$SOC" =~ ^-?[0-9]+$ ]]; then SOC=0; fi
+    if ! [[ "$CHARGE_CURRENT" =~ ^-?[0-9]+$ ]]; then CHARGE_CURRENT=0; fi
+
     # Log high temperature events if any sensor is above 35°C
     HIGH_TEMP_EVENT=""
-    if [ "${NVME_TEMP:-0}" -gt 35 ]; then
+    if [ "$NVME_TEMP" -gt 35 ]; then
       HIGH_TEMP_EVENT+=" NVMe"
       nvme_high_count=$((nvme_high_count + 1))
     fi
-    if [ "${GPU_TEMP:-0}" -gt 35 ]; then
+    if [ "$GPU_TEMP" -gt 35 ]; then
       HIGH_TEMP_EVENT+=" GPU"
       gpu_high_count=$((gpu_high_count + 1))
     fi
-    if [ "${BATTERY_TEMP:-0}" -gt 35 ]; then
+    if [ "$BATTERY_TEMP" -gt 35 ]; then
       HIGH_TEMP_EVENT+=" Battery"
       battery_high_count=$((battery_high_count + 1))
     fi
-    if [ "${SYSTEM_TEMP:-0}" -gt 35 ]; then
+    if [ "$SYSTEM_TEMP" -gt 35 ]; then
       HIGH_TEMP_EVENT+=" System"
       system_high_count=$((system_high_count + 1))
     fi
-    
+
     # Log data to CSV
-    echo "$DATE,${NVME_TEMP:-N/A},${GPU_TEMP:-N/A},${BATTERY_TEMP:-N/A},${SYSTEM_TEMP:-N/A},${SOC:-N/A},${CHARGE_CURRENT:-N/A}" >> "$OUTPUT_FILE"
+    echo "$DATE,$NVME_TEMP,$GPU_TEMP,$BATTERY_TEMP,$SYSTEM_TEMP,$SOC,$CHARGE_CURRENT" >> "$OUTPUT_FILE"
 
     # Log high temperature events to separate CSV file
     if [[ -n $HIGH_TEMP_EVENT ]]; then
@@ -105,7 +113,7 @@ while true; do
     fi
 
     # Display progress
-    echo -e "${GREEN}SoC: ${SOC}%, Target: ${TARGET_SOC}%, Charging Current: ${CHARGE_CURRENT}mA${NC}"
+    echo -e "${GREEN}SoC: $SOC%, Target: $TARGET_SOC%, Charging Current: ${CHARGE_CURRENT}mA${NC}"
 
     # Every 5 minutes, log the high temperature counts and reset them
     if (( iteration % FIVE_MINUTE_INTERVAL == 0 && iteration != 0 )); then
@@ -117,7 +125,7 @@ while true; do
     fi
 
     # Exit when SoC reaches the target percentage or time limit is reached
-    if [[ "$TARGET_SOC" -ne "time" && "$SOC" -ge "$TARGET_SOC" ]]; then
+    if [[ "$TARGET_SOC" != "time" && "$SOC" -ge "$TARGET_SOC" ]]; then
       echo -e "\nTarget SoC reached. Logging complete."
       break
     elif [[ "$TARGET_SOC" == "time" && "$(date +%s)" -ge "$END_TIME" ]]; then
